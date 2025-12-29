@@ -1,4 +1,5 @@
-pip install bitsandbytes
+#!pip install bitsandbytes
+#first install bitsandbytes in your venv
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
