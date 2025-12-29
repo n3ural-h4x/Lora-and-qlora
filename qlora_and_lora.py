@@ -32,28 +32,26 @@ class Qlora_4_bit(nn.Module):
     if quantize_weight:
      self.quant_nn.weight.requires_grad = False
 
-    #INTIALISZE THE WEIGHTS:
-    #torch.nn.init.
+    #INTIALISZE THE WEIGHTS as described in the paper since they wanted the B matrix to be zeros
     torch.nn.init.zeros_(self.W_b)
     torch.nn.init.kaiming_uniform_(self.W_a, a=math.sqrt(5))
 
   def forward(self, x:torch.Tensor):
-
     inter_m = self.quant_nn(x)
 
     if self.require_lora:
-
      casted_W_a = self.W_a.to(x.dtype)
      casted_W_b = self.W_b.to(x.dtype)
      output = inter_m + self.scale * ((x @ casted_W_a) @ casted_W_b)
      return output
+    
     else:
      return inter_m
 
 def quantize_model(module, mlp_layers:list, alpha:int, r:int, require_lora:bool, use_qlora:bool):
   for name, child in list(module.named_children()):
-    if isinstance(child, nn.Linear) and name in mlp_layers and not hasattr(child, 'module_has_been_quantized'):
 
+    if isinstance(child, nn.Linear) and name in mlp_layers and not hasattr(child, 'module_has_been_quantized'):
       new_layer = Qlora_4_bit(
           child.in_features,
           child.out_features,
@@ -63,7 +61,7 @@ def quantize_model(module, mlp_layers:list, alpha:int, r:int, require_lora:bool,
           quantize_weight=True,
           require_lora=require_lora,
           use_qlora=use_qlora
-          ).to(device) # set to cpu if you cpu
+          ).to(device) # set to cpu if you want to use cpu
 
       with torch.no_grad():
           new_layer.quant_nn.weight.data = child.weight.data.clone()
